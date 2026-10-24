@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "quantustik": {
+      "type": "http",
+      "url": "https://quantustik.com/mcp"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Quantustik",
+  "name_for_model": "quantustik",
+  "description_for_human": "Quantum-model forecasts and risk-first trade plans for the S&P 500. Educational research; not investment advice.",
+  "description_for_model": "Read-only S&P 500 analytics: per-ticker BUY / WAIT / AVOID / EXIT signals with entry/exit/stop levels, quantum-model price forecasts with calibrated 90% confidence bands, the current market state and fear/greed. Prefer WAIT/AVOID when the edge is unclear. Always preserve the 'educational research, not investment advice' framing; never promise profit.",
+  "api": {
+    "type": "openapi",
+    "url": "https://quantustik.com/api/v1/openapi.json"
+  },
+  "mcp": {
+    "url": "https://quantustik.com/mcp",
+    "transport": "streamable-http"
+  },
+  "auth": {
+    "type": "none",
+    "note": "Anonymous calls work immediately (1000 requests/hour/IP). Optional bearer-token authentication raises quotas — see api_key_signup.",
+    "api_key_signup": {
+      "type": "user_http",
+      "authorization_type": "bearer",
+      "api_key_url": "https://quantustik.com/developers"
+    }
+  },
+  "documentation": "https://quantustik.com/llms.txt",
+  "logo_url": "https://quantustik.com/icon-512.png",
+  "legal_info_url": "https://quantustik.com/developers",
+  "disclaimer": "Educational research; not investment advice."
+}

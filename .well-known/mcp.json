@@ -1,0 +1,25 @@
+{
+  "name": "Quantustik",
+  "description": "Hosted MCP server for S&P 500 quantum-model stock analytics. Read-only signals, forecasts, trade plans and the current market state over the public API. Educational research; not investment advice.",
+  "mcp": {
+    "url": "https://quantustik.com/mcp",
+    "transport": "streamable-http",
+    "authentication": {
+      "type": "none",
+      "required": false,
+      "anonymous": {
+        "allowed": true,
+        "rate_limit": "1000 requests/hour/IP",
+        "note": "No signup or key needed — call any tool immediately."
+      },
+      "optional": {
+        "type": "bearer",
+        "description": "Optional: send an API key as a Bearer token for higher quotas. Get a free key at https://quantustik.com/developers.",
+        "api_key_url": "https://quantustik.com/developers"
+      }
+    }
+  },
+  "documentation": "https://quantustik.com/llms.txt",
+  "capabilities": "https://quantustik.com/.well-known/quantustik.json",
+  "disclaimer": "Educational research; not investment advice."
+}

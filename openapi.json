@@ -1,0 +1,3030 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Quantustik Public API",
+    "description": "Quantum-mechanics-based S&P 500 signal API. Free, open access.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/track-record": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Track Record",
+        "description": "Realised outcome summary (win-rate + R-distribution) from stored events.\n\nRegistered before `/signals/{ticker}` so the literal `track-record` path\nis not captured as a ticker. Pass `ticker` for a per-ticker record; omit\nit for the portfolio-wide record. Small samples are flagged\n`illustrative: true` and never presented as a reliable hit-rate — every\nnumber is grounded in stored `tp_hit` / `stop_hit` / `position_closed`\nevents.",
+        "operationId": "get_track_record_api_v1_signals_track_record_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Signal",
+        "description": "Quantum swing signal + forecast for one ticker.\n\nPass ``format=markdown`` (or ``Accept: text/markdown``) to get the same\ndata as a compact markdown signal card — renders natively in AI chat.\n\nThe JSON envelope carries a top-level ``disclaimer`` sentence, the same one\nthe list endpoint and the markdown card's footer carry.",
+        "operationId": "get_signal_api_v1_signals__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TickerSignalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Signals",
+        "description": "All tickers from the latest scan, with optional server-side filters and cursor pagination.\n\n**Backward-compatible**: no params returns same behavior as before (all results, no pagination).\n\n**Filters** (all optional, combinable):\n- min_conviction: only return tickers whose 3mo conviction score >= this value.\n- verdict: only return tickers whose VERDICT (what the model thinks of the\n  stock) matches — BUY / WAIT / EXIT, or the published labels\n  BULLISH / NEUTRAL / BEARISH.\n- timing: only return tickers whose ENTRY TIMING (should you buy right now)\n  matches — BUY / WAIT / AVOID / WATCH.\n- direction: deprecated alias for `timing`. It has always matched the entry\n  facet, so it keeps doing exactly that: an existing integration returns the\n  same rows it returns today. Re-pointing it at the verdict facet would have\n  silently widened `direction=BUY` from \"rows with a live, risk-gated entry\"\n  to \"every bullish-leaning row\" — a caller would get MORE rows, most with no\n  entry price, and no way to notice.\n- sector: partial, case-insensitive match against the ticker sector name.\n\n**Pagination**: supply limit to activate cursor pagination; use next_cursor from the\nresponse as the cursor param on the next request. Returns next_cursor=null when exhausted.\n\n*Disclaimer: signals are for informational purposes only and do not constitute financial\nadvice. Always conduct independent research before making investment decisions.*",
+        "operationId": "get_signals_api_v1_signals_get",
+        "parameters": [
+          {
+            "name": "min_conviction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter: minimum conviction score (inclusive).",
+              "title": "Min Conviction"
+            },
+            "description": "Filter: minimum conviction score (inclusive)."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "DEPRECATED ALIAS for `timing`, kept bound to exactly the facet it has always matched (the entry facet: AVOID, BUY, WAIT, WATCH, case-insensitive) so existing integrations keep returning exactly the rows they return today. Use `verdict` for what the model thinks of the stock, or `timing` for whether to enter right now.",
+              "title": "Direction"
+            },
+            "description": "DEPRECATED ALIAS for `timing`, kept bound to exactly the facet it has always matched (the entry facet: AVOID, BUY, WAIT, WATCH, case-insensitive) so existing integrations keep returning exactly the rows they return today. Use `verdict` for what the model thinks of the stock, or `timing` for whether to enter right now."
+          },
+          {
+            "name": "verdict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on the VERDICT facet — what the model thinks of the stock: BUY, EXIT, WAIT (case-insensitive). The published labels are accepted as aliases: BEARISH=EXIT, BULLISH=BUY, NEUTRAL=WAIT.",
+              "title": "Verdict"
+            },
+            "description": "Filter on the VERDICT facet — what the model thinks of the stock: BUY, EXIT, WAIT (case-insensitive). The published labels are accepted as aliases: BEARISH=EXIT, BULLISH=BUY, NEUTRAL=WAIT."
+          },
+          {
+            "name": "timing",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on the TIMING facet (should you enter right now) — AVOID, BUY, WAIT, WATCH (case-insensitive).",
+              "title": "Timing"
+            },
+            "description": "Filter on the TIMING facet (should you enter right now) — AVOID, BUY, WAIT, WATCH (case-insensitive)."
+          },
+          {
+            "name": "sector",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter: partial, case-insensitive sector name match.",
+              "title": "Sector"
+            },
+            "description": "Filter: partial, case-insensitive sector name match."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 100,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (1–100). When omitted, all results are returned (backward-compatible default). When provided, cursor pagination is activated.",
+              "title": "Limit"
+            },
+            "description": "Page size (1–100). When omitted, all results are returned (backward-compatible default). When provided, cursor pagination is activated."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque pagination cursor returned by a previous response next_cursor.",
+              "title": "Cursor"
+            },
+            "description": "Opaque pagination cursor returned by a previous response next_cursor."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{ticker}/history": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Signal History",
+        "description": "Event history for a ticker: every signal opened, and how each one ended.\n\nDepth does not vary by tier. Every feature map carries the same\n``history_max_events``, and this route applies its own ceiling to everyone\nvia the ``limit`` query bound, so the clamp below can only ever return what\nwas asked for. It stays as the enforcement point rather than being deleted.",
+        "operationId": "get_signal_history_api_v1_signals__ticker__history_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Current market state — verdict, score, signal breakdown, action plan",
+        "description": "The market's current state: verdict, 0-100 score, the signal breakdown\nbehind it, how confident the model is, and the action plan that follows.\n\nThis is the whole market snapshot, not one number. `/market/indicators`\nreturns the same state as a row-per-signal sheet worded for a human.",
+        "operationId": "get_market_api_v1_market_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market/regime": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Deprecated alias of GET /api/v1/market — identical payload",
+        "description": "Deprecated alias of `GET /api/v1/market`, kept working permanently.\n\nReturns exactly the same payload. Existing integrations do not need to\nchange; new ones should use `/api/v1/market`.",
+        "operationId": "get_market_deprecated_alias_api_v1_market_regime_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketResponse"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/api/v1/market/indicators": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Market Indicators",
+        "description": "Every market indicator we compute, in plain English, with its live contribution.\n\nThe model weighs 18 signals into one score; this returns all 18 — not just the\nhandful the dashboard has room for — each with a plain-English label, its current\nstate, what that state means, which way it is pushing the verdict, and by how much.\n\nRows are grouped by what they are doing to the verdict (`groups`): pushing it\ndown, pushing it up, measured-but-silent, and no-data. `aggregate.arithmetic`\nshows the sum that produces the score, so the verdict can be checked rather than\ntaken on faith.\n\nThis is the SAME payload the website and the MCP `get_market_indicators` tool render.\nNone of them re-words it, which is what stops the surfaces drifting apart.",
+        "operationId": "get_market_indicators_api_v1_market_indicators_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketIndicatorsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ticker/{ticker}/indicators": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Ticker Indicators",
+        "description": "Everything we compute about one stock, in plain English, with its contribution.\n\nThe per-ticker twin of `/market/indicators`, built from the same row type and the\nsame colour rule: the eight weighted components that make the conviction score,\nthe forecast band, the risk and sizing numbers, and every one of the risk checks\nthat can veto a BUY — each with a plain-English label, its current reading, what\nthat reading means, and which way it is pushing the verdict.\n\n`aggregate.arithmetic` shows the sum that produces the score (a neutral stock\nstarts at 5.0 out of 10 and the scoring rows move it from there), so the verdict\ncan be checked rather than taken on faith. Risk checks carry no points — they are\nvetoes — and the note says so.\n\nRows arrive pre-worded: this API, the MCP tool, the website and the crawler\nedition all render the SAME sentences, which is what stops them drifting apart.",
+        "operationId": "get_ticker_indicators_api_v1_ticker__ticker__indicators_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TickerIndicatorsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ticker/{ticker}/too-late": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Too Late",
+        "description": "\"Am I too late to buy this?\" — answered as an instruction with a price in it.\n\nThe single most-repeated question a retail investor asks, and the one nobody\nanswers straight. The reply is a headline verdict, one instruction naming the\nprice you should and should not pay, and the level at which our own call is\nwrong — a stop if there is a live plan, the top of our 90% forecast band if we\nare telling you not to buy. It will say \"yes, you're late\" when our own\nthree-month estimate sits below today's price, because a missed trade is cheap\nand a bad one is not.\n\nThe risk-gate trace comes back in `why`, below the answer: it is the receipt\nfor the verdict, not something the customer should have to interpret to get one.",
+        "operationId": "get_too_late_api_v1_ticker__ticker__too_late_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooLateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market/fear-greed": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Fear Greed",
+        "description": "Fear & Greed index (latest cached value).",
+        "operationId": "get_fear_greed_api_v1_market_fear_greed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FearGreedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/earnings/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Earnings V1",
+        "description": "Earnings calendar for one ticker: the next and last reporting dates, and how many days away the next one is.\n\nA risk gate, not a convenience: swing BUYs are suppressed within 5 days\nof earnings. Absence of data returns ``available: false`` with\nHTTP 200 (a normal cold-cache state), never a 404. ``as_of`` anchors\ndata freshness so callers can reason about staleness.",
+        "operationId": "get_earnings_v1_api_v1_earnings__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/forecast/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Forecast",
+        "description": "Full quantum forecast across horizons.\n\nEvery horizon the model emits (1mo/3mo/6mo/1y) is available to every tier,\nincluding free — the forecast itself is never gated, and never a\nlever a paid plan buys. What paid tiers buy instead is depth, capacity,\nautomation and the personalised position layer.\n\nPass ``format=markdown`` (or ``Accept: text/markdown``) for the compact\nmarkdown forecast card — same data.\n\nThe JSON envelope carries a top-level ``disclaimer`` sentence, the same one\nthe signals endpoints and the markdown card's footer carry.",
+        "operationId": "get_forecast_api_v1_forecast__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market/correlations": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Correlations",
+        "description": "Cross-ticker entanglement matrix: which S&P 500 names the quantum model expects to move together.\n\n``entanglement`` is the Pearson correlation of the model's *forecast* return\npaths (``mode=forecast``, default) — a forward-looking, model-implied\nco-movement signal, **NOT** a claim about realised market correlation. Use it\nas a diversification-risk lens (don't stack names that are one trade) and a\npairs/divergence lens. ``mode=realized`` gives the trailing-returns consensus\nbaseline for comparison. Every number is computed from real persisted scan\ndata; tickers with no usable series are reported in ``missing``, never imputed.\n\n``basis=ensemble`` (forecast mode only) correlates across the model's\nfull forecast band envelope (q05/q25/mean/q75/q95) and averages the per-band\ncorrelations, surfacing tail co-movement that the default ``basis=mean``\n(mean curve only) understates. The method label switches to\n``quantum_forecast_ensemble`` so the two are never conflated.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_correlations_api_v1_market_correlations_get",
+        "parameters": [
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Forecast horizon to correlate: 1mo, 3mo, 6mo, or 1y.",
+              "default": "3mo",
+              "title": "Horizon"
+            },
+            "description": "Forecast horizon to correlate: 1mo, 3mo, 6mo, or 1y."
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "forecast = Pearson correlation of the quantum model's forecast price curves (model-implied co-movement; the default, non-consensus signal). realized = correlation of trailing daily returns (consensus baseline).",
+              "default": "forecast",
+              "title": "Mode"
+            },
+            "description": "forecast = Pearson correlation of the quantum model's forecast price curves (model-implied co-movement; the default, non-consensus signal). realized = correlation of trailing daily returns (consensus baseline)."
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Forecast-mode correlation basis. mean (default) correlates the single mean forecast curve. ensemble correlates across the q05/q25/mean/q75/q95 band envelope and averages the per-band correlations, surfacing tail co-movement the mean curve misses. Ignored in realized mode.",
+              "default": "mean",
+              "title": "Basis"
+            },
+            "description": "Forecast-mode correlation basis. mean (default) correlates the single mean forecast curve. ensemble correlates across the q05/q25/mean/q75/q95 band envelope and averages the per-band correlations, surfacing tail co-movement the mean curve misses. Ignored in realized mode."
+          },
+          {
+            "name": "top_n",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 2,
+              "description": "Universe size: top-N tickers by 3mo forecast growth (2–100).",
+              "default": 50,
+              "title": "Top N"
+            },
+            "description": "Universe size: top-N tickers by 3mo forecast growth (2–100)."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "When set, return only this ticker's correlation row, not the full matrix.",
+              "title": "Ticker"
+            },
+            "description": "When set, return only this ticker's correlation row, not the full matrix."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrelationMatrixResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insider/screener": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Insider Screener Route",
+        "description": "S&P 500 screener: which top-100 tickers have notable insider activity now.\n\n\"Notable\" = a cluster buy (3+ distinct insiders buying within 10 days) or a\nsingle buy that is >=2x that insider's own historical median buy size, in\nthe last 30 days. Empty `results` is a valid, honest answer — most weeks\nhave no qualifying activity. Cached ~12h; a periodic\n``tasks.insider_pulse.refresh_insider_screener`` Procrastinate task keeps\nthat cache warm — this endpoint is cache-read-only and NEVER\ntriggers a live ~100-CIK EDGAR fan-out on a cold miss.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nNote: registered ABOVE `/insider/{ticker}` — FastAPI matches path\noperations in registration order, and \"screener\" would otherwise be\ncaptured as a literal ticker symbol by the dynamic route below.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_insider_screener_route_api_v1_insider_screener_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insider/feed": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Insider Feed Route",
+        "description": "Paginated, dated feed of persisted SEC Form 4 insider transactions\nacross the full S&P 500.\n\nUnlike `/insider/screener` (a rolling TOP-100 \"notable this month\"\nsnapshot with no history), this reads the durable ``insider_events``\nPostgres store so callers can page back through real dated\nhistory. Ordering is pure newest-filed-first — cluster-buy and\nunusually-large flags are informational only and do not affect sort.\n\nQuery params:\n- `page` (default 1), `per_page` (default 25, max 100).\n- `window`: lookback in days from today (default 90, max 400 — the\n  store's retention horizon).\n- `type`: optional `\"buy\"` or `\"sell\"` filter on the SEC transaction\n  code; omitted/other values return both.\n- `ticker`: optional single-symbol filter, applied server-side over the\n  whole stored history (so `total` and the page count stay correct under\n  the filter, rather than the caller having to page through everything and\n  filter client-side).\n\nAn empty `items` list with `total: 0` is a valid, honest answer (e.g.\nbefore the first ingestion run, or a quiet window) — never an error.\n\nRead-only surfacing — this is information, not a buy/sell\nrecommendation, and does not feed the model's conviction/signal logic.\n\nNote: registered ABOVE `/insider/{ticker}` — FastAPI matches path\noperations in registration order, and \"feed\" would otherwise be\ncaptured as a literal ticker symbol by the dynamic route below.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_insider_feed_route_api_v1_insider_feed_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 1,
+              "default": 90,
+              "title": "Window"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(buy|sell)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9.\\-]{0,9}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/digest": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filings Digest Feed Route",
+        "description": "Site-wide feed: most recent 8-K filings across the S&P 500 (TOP-100) universe.\n\nEach entry carries a grounded event type (derived from the filing's own\nSEC Item number(s) — never LLM-guessed), a one-line AI summary grounded\nin the actual filing text, and a link to the source accession. Empty\n`filings` is a valid, honest answer for a quiet news day. Cached ~2h; a\nperiodic ``tasks.filings_digest.refresh_8k_feed_digest`` Procrastinate\ntask keeps that cache warm — this endpoint is cache-read-only\nand NEVER triggers a live ~100-CIK EDGAR fan-out on a cold miss.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nNote: registered ABOVE `/filings/digest/{ticker}` — FastAPI matches path\noperations in registration order, and \"digest\" alone has no ticker\nsegment so this is unambiguous, but kept consistent with the\n`/insider/screener` vs `/insider/{ticker}` ordering convention above.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_filings_digest_feed_route_api_v1_filings_digest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/digest/10-k": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filings 10K Digest Feed Route",
+        "description": "Site-wide feed: most recent 10-K annual reports across the S&P 500 (TOP-100) universe.\n\nCompanion to `/filings/digest` (surfaces top 10-Ks alongside the\n8-K card). Unlike the 8-K feed, entries are metadata-only — ticker,\nfiled date, and a link to the source accession, no AI summary — since a\n10-K is far too long to cheaply excerpt/ground a one-liner in. Empty\n`filings` is a valid, honest answer. Cached ~6h; a periodic\n``tasks.filings_digest.refresh_10k_feed_digest`` Procrastinate task keeps\nthat cache warm — this endpoint is cache-read-only and NEVER\ntriggers a live ~100-CIK EDGAR fan-out on a cold miss.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nNote: registered ABOVE `/filings/digest/{ticker}` for the same reason as\n`/filings/digest` above — \"10-k\" would otherwise be captured as a\nliteral ticker symbol by the dynamic route below.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_filings_10k_digest_feed_route_api_v1_filings_digest_10_k_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/digest/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filings Digest Ticker Route",
+        "description": "8-K Event Digest — recent 8-K filings for one ticker, AI-summarized.\n\nFor each filing: event type derived from the filing's own SEC Item\nnumber(s) (ground truth, e.g. Item 5.02 = exec departure/appointment,\nItem 2.02 = earnings results, Item 2.01 = M&A completion — never\nLLM-guessed), a one-line AI summary grounded in the actual filed\ndocument text, and a link to the source accession via `accession_url`.\n\nCache-read on the request path: a cold miss (this ticker's\nlatest 8-K hasn't been summarized yet) returns an instant item-label\nentry (`summary_source: \"pending\"`) instead of blocking on an EDGAR\ndoc fetch + LLM call — generation is deferred to a background\nProcrastinate task so the next request serves the real grounded\nsummary. Same precompute/prewarm convention as\n`/api/insights/{ticker}/sector`.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_filings_digest_ticker_route_api_v1_filings_digest__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/feed": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filings Feed Route",
+        "description": "One dated, page-through history covering every SEC filing form we store.\n\nThe companion `/filings/8-k/feed` below is the same store narrowed to 8-Ks;\nthis endpoint is the whole thing, so a caller can show annual reports and\nmaterial events side by side without stitching two feeds together.\n\nQuery params:\n- `form`: optional SEC form filter — currently `8-K` (material events) or\n  `10-K` (annual reports). Omitted returns every form. A form we do not\n  store is a 400, never a silently-empty page: \"we don't carry that form\"\n  and \"that form had no filings\" are different answers and the caller\n  deserves to be able to tell them apart.\n- `ticker`: optional single-symbol filter.\n- `event_type`: optional narrowing to one broad 8-K category derived from\n  the SEC's own item numbers (e.g. \"earnings\", \"exec_change\").\n- `page` / `per_page`: pagination. The response always carries `total`, so\n  the caller never has to fetch everything to learn how much there is.\n\nBoth filters are applied **server-side**, over the entire stored history —\nnot over the current page — so `total` and the page count remain truthful\nwhile a filter is on.\n\nAn empty result is a valid, honest answer (a quiet news day, or a ticker we\nhave no filings for). This endpoint reads only our own store and never\ncalls SEC EDGAR, so it cannot be made slow — or get us rate-limited — by\ntraffic.\n\nRead-only surfacing of official public-record data — this is information,\nnot a buy/sell recommendation, and does not feed the model's\nconviction/signal logic.",
+        "operationId": "get_filings_feed_route_api_v1_filings_feed_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Form"
+            }
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9.\\-]{0,9}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/8-k/feed": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filings 8K Feed Route",
+        "description": "A dated, page-through history of 8-K filings (the reports a company must file when something material happens).\n\nDifferent from the `/filings/digest` endpoint above, which only ever shows\na rolling snapshot of the current feed and cannot be paged back through.\nThis one is backed by a durable, append-only history, so you can walk back\nas far as it goes. Newest filing first. `event_type` optionally narrows the\nresults to one broad category derived from the SEC's own filing items (for\nexample \"earnings\" or \"exec_change\").\n\nAn empty result is a valid, honest answer — most often a quiet news day.\nThis endpoint never fails because the history store is unavailable; it\ndegrades to an empty page.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_filings_8k_feed_route_api_v1_filings_8_k_feed_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9.\\-]{0,9}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filings/language-diff/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Filing Language Diff Route",
+        "description": "What changed in the language of one company's latest SEC filing, versus the comparable filing a year (or a quarter) earlier.\n\nCovers the two sections where companies describe what could go wrong and\nhow management reads the business: Risk Factors and Management's\nDiscussion & Analysis.\n\nCites a known academic finding (Cohen, Malloy & Nguyen 2020, \"Lazy\nPrices\", Journal of Finance): YoY changes in 10-K Risk Factors/MD&A\nlanguage are historically return-predictive. The similarity score is a\nreal TF-IDF cosine similarity computed between the two actual filing\nsections; `added_sentences`/`removed_sentences` are a real sentence-level\ndiff. Every entry links to BOTH source filings via `filings[].accession_url`.\n\nAn empty `sections` dict is a valid, honest answer when fewer than 2\nfilings of the requested form are on file, or a section couldn't be\nreliably extracted from both filings (see module docstring in\n`quantum_model/filing_language_diff.py` for known extraction-format\ngaps) — never fabricated.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nCache-read-only (precompute+cache convention): the expensive diff (two\nmulti-MB filing downloads + sentence-level TF-IDF diff + up to two LLM\ncalls) NEVER runs on this request path. On a cold cache key the response is\n``status=\"pending\"`` (with both source-filing links already populated) and\na background worker computes+caches the diff; a follow-up request serves it.\n\nArgs:\n    form: \"10-K\" (year-over-year, default) or \"10-Q\" (quarter-over-quarter).\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_filing_language_diff_route_api_v1_filings_language_diff__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(10-K|10-Q)$",
+              "default": "10-K",
+              "title": "Form"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/institutional/feed": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Institutional Feed Route",
+        "description": "A dated, page-through feed of institutional 13F holdings — who owns what, and how much.\n\nEach row is one institutional holder × one security × one reported\nquarter: the filer, the security (with its ticker where we can map the\nCUSIP to one we cover), share count, reported dollar value, the quarter it\ncovers, the date it was filed, and a link to the source 13F accession.\nNewest filing first; within a day the larger dollar positions lead.\n\nUnlike `/institutional/{ticker}` (a per-ticker quarter-over-quarter whale\nsummary), this reads the durable ``institutional_holdings`` Postgres store\nso callers can page back through real dated history.\n\nCoverage is deliberately narrow — roughly 50 large institutional filers\nover the last few quarters, NOT all 13F filings. `ticker` optionally\nnarrows to one symbol (server-side, so the `total` stays truthful under the\nfilter); a ticker we don't cover, or a holding whose CUSIP never mapped to\na symbol, yields an honest empty page.\n\nAn empty `items` list with `total: 0` is a valid, honest answer (e.g.\nbefore the first ingestion run) — never an error. This endpoint never hits\nEDGAR; it is a Postgres read only, and degrades to an empty page when the\nstore is unavailable.\n\nNote: registered ABOVE `/institutional/{ticker}` — FastAPI matches path\noperations in registration order, and \"feed\" would otherwise be captured as\na literal ticker symbol by the dynamic route below.\n\nRead-only surfacing of first-source public records — this is information,\nnot a buy/sell recommendation, and does not feed the model's\nconviction/signal logic.",
+        "operationId": "get_institutional_feed_route_api_v1_institutional_feed_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 1,
+              "default": 400,
+              "title": "Window"
+            }
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/institutional/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Institutional Activity Route",
+        "description": "What the big institutional investors and activist shareholders are doing in one ticker.\n\n``whale_summary``: QoQ (quarter-over-quarter) change in institutional\nownership across a curated ~50-filer 13F universe — new positions\nopened, positions closed, and the largest increases/decreases by dollar\nvalue between the two most recent 13F quarters on file. Pure computed\ndeltas, no LLM. Institutional filer names come from SEC's own\nsubmissions data (ground truth), and every filer row links to its\nsource 13F accession via `accession_url`.\n\n``activist_alerts``: recent Schedule 13D (activist/control intent) and\n13G (passive >5% stake) filings. 13D entries include a one-line AI\nsummary grounded strictly in the filing's own Item 4 (\"Purpose of\nTransaction\") text when confidently extractable (`summary_source:\n\"llm\"`); otherwise a factual fallback sentence (`summary_source:\n\"item_label\"`) — never invented intent. 13G entries get a structured,\nnon-AI note (`summary_source: \"structured\"`). Every alert links to its\nsource filing via `accession_url`.\n\nAn empty/near-empty result (empty `activist_alerts`, or a `whale_summary`\nwith a `narration` explaining why there's nothing to compute) is a\nvalid, honest answer — never fabricated.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nCache-read-only: this endpoint NEVER triggers the 13F universe rebuild\n(an EDGAR fan-out over every tracked whale filer) — the periodic\n``tasks.institutional_activity.refresh_institutional_activity``\nProcrastinate task owns generation. On a cold/lapsed cache the payload is\nserved stale-but-labelled (`stale`, `cache_age_hours`, `cache_status`) or\nas an honest \"no data cached yet\" state, rather than blocking the request\non a rebuild.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_institutional_activity_route_api_v1_institutional__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insider/{ticker}": {
+      "get": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Get Insider Pulse Route",
+        "description": "Insider Pulse — recent SEC Form 4 insider transactions for one ticker.\n\nSurfaces already-ingested Form 4 filings (the same EDGAR data feeding the\nmarket model's `form4` stage) with analytical context per transaction:\nbuyer role (officer/director/10% owner), transaction size vs that\ninsider's own historical buy pattern (`size_vs_own_median`,\n`is_unusually_large`), and cluster-buy detection (`is_cluster` — 3+\ndistinct insiders buying within a 10-day window). Every transaction links\nto its source SEC filing via `accession_url`.\n\nRead-only surfacing — this is information, not a buy/sell recommendation,\nand does not feed the model's conviction/signal logic.\n\nCache-read-only (precompute+cache convention): the fast persisted-store read\nis served directly for covered tickers. For an uncovered long-tail ticker\n(store miss) the expensive live per-symbol FMP fetch NEVER runs on this\nrequest path — the response is ``status=\"pending\"`` and a background worker\nruns+caches the fetch; a follow-up request serves it cache-only.\n\n*Disclaimer: informational only; not investment advice.*",
+        "operationId": "get_insider_pulse_route_api_v1_insider__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhook/tradingview": {
+      "post": {
+        "tags": [
+          "public-v1"
+        ],
+        "summary": "Tradingview Webhook",
+        "description": "Accept a TradingView alert and queue a background signal refresh.\n\nConfigure your TradingView alert to POST to:\n  https://quantustik.com/api/v1/webhook/tradingview\nwith body: {\"ticker\": \"{{ticker}}\", \"message\": \"{{strategy.order.comment}}\"}",
+        "operationId": "tradingview_webhook_api_v1_webhook_tradingview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradingViewAlert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookQueuedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CorrelationMatrixResponse": {
+        "properties": {
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "scan_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Date"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "horizon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "CorrelationMatrixResponse",
+        "description": "Cross-ticker entanglement matrix (full or single-ticker shape).\n\n``extra=allow`` so the full-matrix shape (matrix/top_pairs/missing) and the\nsingle-ticker shape (correlations/most_entangled/most_divergent/note) share\none model — the route returns whichever the request selected."
+      },
+      "EarningsLast": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "eps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eps"
+          },
+          "eps_estimated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eps Estimated"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue"
+          },
+          "revenue_estimated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue Estimated"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "EarningsLast",
+        "description": "Last-reported earnings event (actuals vs. estimates)."
+      },
+      "EarningsNext": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "eps_estimated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eps Estimated"
+          },
+          "revenue_estimated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue Estimated"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "description": "Session timing: \"amc\" (after close), \"bmo\" (before open), or null."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "EarningsNext",
+        "description": "Next-upcoming earnings event (estimates only — not yet reported)."
+      },
+      "EarningsResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": false
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsNext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsLast"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days_until_next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Until Next",
+            "description": "How many calendar days from the `as_of` date until the company next reports earnings. Null when we do not know the date."
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of",
+            "description": "Date the calendar was computed (data-freshness anchor)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ticker"
+        ],
+        "title": "EarningsResponse",
+        "description": "Per-ticker earnings calendar.\n\nA first-class risk gate: swing BUYs are suppressed within 5 days of\nearnings, so an agent must be able to see the earnings clock to\nreason about overnight gap risk. ``available: false`` (with HTTP 200)\nsignals \"no earnings data\" — a normal cold-cache state, not an error."
+      },
+      "FearGreedResponse": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Index score, 0 (Extreme Fear) to 100 (Extreme Greed)."
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label",
+            "description": "Rating for the score, e.g. \"fear\", \"greed\"."
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp",
+            "description": "When the index was last updated (ISO 8601)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "FearGreedResponse",
+        "description": "Fear & Greed index snapshot.\n\n``value`` / ``label`` / ``timestamp`` are the flat, documented contract.\nThe upstream payload nests the same data under ``current``\n({score, rating, updated_at}), which left all three declared fields null on\nthe wire; the route lifts them so the declared shape is the shape actually\nreturned. ``current`` / ``history`` / ``sub_indicator_scores`` still ride\nalong via ``extra=\"allow\"`` for the consumers that already read them."
+      },
+      "ForecastResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "band_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Coverage Pct",
+            "description": "ALWAYS NULL. This API publishes no coverage percentage for an individual ticker. One exception applies by measurement CLASS, not by naming an endpoint: any row anywhere we publish that names a ticker plus a forecast start date as a worst individual window (e.g. GET /api/calibration, GET /api/calibration/tsfm) is a cell of that universe measurement, not a reading for this ticker. The key is retained so a consumer sees an explicit null rather than a vanished field. It used to carry the 3mo horizon's scan-time backtest coverage; that figure was withdrawn because it is a single hold-out window (effective sample size one) and because its HIGH end is a defect (band too wide to be informative) that reads as a good grade. Rank on band_reliability; read horizons.*.band_width_read for the direction of miss. Never entitlement-gated."
+          },
+          "calibration_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Score",
+            "description": "ALWAYS NULL. Deprecated alias of band_coverage_pct, retained at the same permanent null so existing consumers see an explicit empty value rather than a missing key. The name wrongly implied a higher-is-better accuracy score; it was never one. See band_coverage_pct for why no per-ticker coverage percentage is published, and rank on band_reliability."
+          },
+          "band_reliability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Reliability",
+            "description": "Reliability of the 3mo band in [0.1, 0.9] — higher is better, and the field to rank tickers on. It survives the withdrawal of the coverage percentage because it is two-sided: it peaks when a nominal 90% band actually covers ~90% and decays above as well as below, so an over-wide band cannot score high and the score cannot be misread as a hit rate. Derived from the same single-window backtest, so treat it as a coarse ordering, not a measurement. Null when this ticker's cohort has no backtest. Never entitlement-gated."
+          },
+          "regime_conditioned": {
+            "type": "boolean",
+            "title": "Regime Conditioned",
+            "description": "True when a live market snapshot conditioned this forecast. The field name is kept unchanged for existing integrations. Never entitlement-gated.",
+            "default": false
+          },
+          "horizons": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/QuantumHorizonResponse"
+            },
+            "type": "object",
+            "title": "Horizons"
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer",
+            "description": "Compact disclaimer sentence for this detachable JSON envelope — a machine consumer reads P(up), the CI90 band and growth_pct without rendering any page, so the notice travels with the payload."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ticker"
+        ],
+        "title": "ForecastResponse",
+        "description": "Full multi-horizon quantum forecast for one ticker."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "HistoryEvent": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Type"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "HistoryEvent",
+        "description": "A single event in a ticker's signal history.\n\nThe event payload is open-ended; extra fields are forwarded as-is."
+      },
+      "HistoryResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ticker",
+          "count"
+        ],
+        "title": "HistoryResponse",
+        "description": "Event history for a ticker."
+      },
+      "MarketIndicatorsResponse": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "aggregate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate"
+          },
+          "groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groups"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "MarketIndicatorsResponse",
+        "description": "Every market indicator, already worded for a human.\n\nRows arrive presentation-ready (label, display, meaning, colour, tooltip) so\nthat no consumer — this API, the MCP tool, the website or the crawler edition —\nhas to invent its own wording and drift away from the others."
+      },
+      "MarketResponse": {
+        "properties": {
+          "verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict",
+            "description": "AUTHORITATIVE verdict tier — the same one the dashboard shows. One of Strong Buy / Buy / Neutral / Caution / Strong Avoid (there is no Bull/Bear vocabulary). This is the confidence-adjusted tier; `model_verdict` carries the tier before the low-confidence downgrade and differs only when `confidence_downgraded` is true."
+          },
+          "model_verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Verdict",
+            "description": "Verdict tier before the low-confidence downgrade. Diagnostic, not the answer."
+          },
+          "confidence_downgraded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Downgraded",
+            "description": "True when confidence < 0.50 softened `verdict` one tier toward Neutral."
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "Buying-conditions score, 0-100. HIGHER IS BETTER FOR BUYING. It is relative, not absolute: a z-score of the composite against its own trailing ~6 months of daily readings, so a low score means 'among the weakest readings in about six months', never a claim about what percentage of the market is 'healthy'. See `score_basis`."
+          },
+          "buying_conditions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buying Conditions",
+            "description": "Self-describing block: score, direction, plain-English label, colour, and what the score is measured against."
+          },
+          "score_basis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Basis",
+            "description": "What the 0-100 score is measured against, in plain English (relative to its own trailing window)."
+          },
+          "overheating": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overheating",
+            "description": "The froth check. READ `legs`, `state` and `headline`. `legs` is the two readings froth is actually made of, 0-100 each: how cheaply risk is priced (calm volatility, tight credit spreads) and how much the crowd is piling in (greed, stretched breadth). Froth means BOTH are high at once. `state` names the pair in plain English; `headline` is a one-line human summary (state + both leg scores). The composite AND-gate scalar is NOT a top-level field — it is degenerate as a headline (collapses to ~0 whenever either leg is ~0, reading identically for a calm, cheaply-priced market and for an outright panic), so it is demoted to `composite_gated.value`, labeled as meaningless without both legs. Computed ONLY from froth inputs, never derived from `score` above; includes a full component decomposition. Not a forecast."
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At",
+            "description": "ISO-8601 UTC timestamp of when this snapshot was computed — the as-of stamp. Always present on a stored snapshot; use it to judge freshness before acting on the reading."
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "description": "True when this snapshot is older than the most recent scheduled refresh that should already have run (the batch scan, 02:00 UTC Mon-Fri), or when it carries no usable timestamp. Weekends do not make a Friday reading stale — no refresh is scheduled while the market is shut. Stale data is still served with HTTP 200: reads never recompute, so the flag is the honest signal, not an error.",
+            "default": false
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason",
+            "description": "Why the reading is stale: `missed_scheduled_refresh`, `no_timestamp`, or `unparseable_timestamp`. Null when fresh."
+          },
+          "age_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Hours",
+            "description": "How many hours ago this snapshot was computed. Null when the snapshot carries no usable timestamp — never back-filled from now."
+          },
+          "action_plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Plan",
+            "description": "Market-level entry / sizing / exit plan. In exit, take-profit levels (tp1_price, tp2_price, reference_price) are null when no live SPY quote is available — signalled by price_levels_available: false. They are never zero-filled."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "MarketResponse",
+        "description": "The market's current state — TWO independent readings, one direction each.\n\n``score`` / ``buying_conditions`` answer \"how favorable are buying conditions?\"\n(HIGH = more favorable). ``overheating`` answers \"is this market frothy?\" (HIGH =\nhot). The second is NOT the first inverted: it is computed from froth\ninputs only and can legitimately read \"not hot\" while buying conditions\nare bad — which is how a weak market under a calm surface is described,\nas opposed to a bubble.\n\nThe snapshot has a fixed core but grows extra keys over time;\n``extra=\"allow\"`` forwards them all without schema churn."
+      },
+      "MeasuredRewardToRiskResponse": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": "Measured reward-to-risk"
+          },
+          "rr_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rr Ratio",
+            "description": "The measured conservative reward-to-risk (reward to the TP1 rung over risk to the stop), at 2-decimal storage precision. This is the value the >=2:1 sizing gate reads — NOT the swing planned R:R on `signal.rr_ratio`."
+          },
+          "min_required": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Required",
+            "description": "The risk-first minimum this ratio is judged against (2.0)."
+          },
+          "meets_minimum": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meets Minimum",
+            "description": "Whether the measured ratio is at or above the 2:1 minimum. Descriptive only — a published BUY has already cleared it; a WAIT may carry a value below it as the reason the trade was stood aside."
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis",
+            "description": "Plain-English rendering of the ratio with the forecast price it was measured from, e.g. `1.8:1 (the forecast distribution's TP1 rung over risk to the stop, priced at the forecast's $100.00 — a per-trade measurement, not the ladder's planned target)`."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "MeasuredRewardToRiskResponse",
+        "description": "Forecast-derived, per-trade reward-to-risk — the ratio the sizing gate binds on.\n\nDistinct from ``signal.rr_ratio``, which is the swing ladder's PLANNED TP2\nrung (a design constant that equals its configured multiple on every\npublishable signal). This one is the conservative TP1 rung over risk to the\nstop, both quantiles of the forecast's simulated path extrema — it varies\nper ticker and routinely falls below the 2:1 floor, so it is a genuine\nmeasurement of this setup rather than a fixed target. ``basis`` names the\nforecast price it was measured from, so the two figures can never be\nconfused with each other or with the same levels re-priced at today's spot."
+      },
+      "QuantumHorizonResponse": {
+        "properties": {
+          "prob_up": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob Up"
+          },
+          "growth_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Growth Pct"
+          },
+          "downside_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downside Pct"
+          },
+          "ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Low"
+          },
+          "ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci High"
+          },
+          "band_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Coverage Pct",
+            "description": "ALWAYS NULL. This API publishes no coverage percentage for an individual ticker, at any horizon. One exception applies by measurement CLASS, not by naming an endpoint: any row anywhere we publish that names a ticker plus a forecast start date as a worst individual window (e.g. GET /api/calibration, GET /api/calibration/tsfm) is a cell of that universe measurement, not a reading for this ticker. The key is retained so a consumer sees an explicit null rather than a vanished field. It used to carry the live scan's own backtest coverage; that figure was withdrawn because it is a single hold-out window (effective sample size one, so it swings on nothing but the start date), and because a bare coverage percent inverts on the reader — its HIGH end is a defect (band too wide to be informative) that reads as a good grade. Read band_width_read for the direction of miss, band_reliability to rank, and GET /api/calibration for the measured universe record."
+          },
+          "backtest_ci90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backtest Ci90",
+            "description": "ALWAYS NULL. Deprecated alias of band_coverage_pct, retained at the same permanent null so existing consumers see an explicit empty value rather than a missing key. See band_coverage_pct for why no per-ticker coverage percentage is published."
+          },
+          "band_reliability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Reliability",
+            "description": "Reliability of this horizon's band in [0.1, 0.9] — higher is better, and the field to rank on. It survives the withdrawal of the coverage percentage because it is two-sided: it peaks when a nominal 90% band actually covers ~90% and falls away above as well as below, so an over-wide band cannot score high and the score cannot be misread as a hit rate. Derived from the same single-window backtest, so treat it as a coarse ordering, not a measurement. Null when this ticker's cohort has no backtest."
+          },
+          "band_width_read": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Width Read",
+            "description": "Which way this ticker's 90% band missed on ONE backtested hold-out window, as a word — never a percentage. One of `ran-narrow` (band too tight; the real downside was wider than it looked), `about-right`, or `ran-wide` (band too wide to be informative — a DEFECT, not a good grade). Read it as a direction of miss only: it comes from a single window on a model computed without the coupling and haircut the served forecast applies. Absent when this ticker's cohort has no backtest. Always accompanied by band_width_note."
+          },
+          "band_width_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Width Note",
+            "description": "The sentence that must travel with band_width_read: what the read was computed from, why its underlying percentage is not publishable, and where the measured universe record lives. Present exactly when band_width_read is."
+          },
+          "calibration": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration",
+            "description": "Scope of the published band-calibration record, for this horizon. It carries NO coverage figure for this ticker: `ci90_empirical_coverage` is always null, because coverage is measured across a twenty-name universe at a given forecast start date and no cell of the record is a property of one symbol. Keys: cohort (core | high_interest), scope, calibration_status (varies-by-start-date | not-published | not-backtested — a statement about what we publish, never a grade for this ticker), universe_ci90_range_pct (the lowest and highest coverage observed ACROSS start dates for the universe, whole percents, core cohort only), published_record, and a note. Read GET /api/calibration for the per-start-date table itself. Absent for horizons the record does not measure (e.g. 1mo)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "QuantumHorizonResponse",
+        "description": "Quantum model statistics for a single forecast horizon."
+      },
+      "SignalsListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TickerSignalResponse"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor",
+            "description": "Opaque cursor for the next page. Null when no more results or when limit was not specified. Pass as cursor= on the next request."
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer",
+            "description": "Compact disclaimer sentence for this detachable JSON envelope — per-item citation is skipped on list surfaces, so this top-level field carries it instead."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "count"
+        ],
+        "title": "SignalsListResponse",
+        "description": "All-tickers signal list."
+      },
+      "SwingSignalResponse": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict",
+            "description": "THE VERDICT — what the model thinks of this stock: BUY | WAIT | EXIT. This is the same field, with the same meaning, that the website shows in its verdict hero (labelled BULLISH / NEUTRAL / BEARISH via `verdict_label`), so an answer quoted from this API cannot contradict the page. Never null. NOTE: this field previously carried the ENTRY (timing) facet — that value now has its own name, `timing`, and is unchanged there.",
+            "default": "WAIT"
+          },
+          "verdict_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Label",
+            "description": "The verdict as a customer reads it: BULLISH | NEUTRAL | BEARISH. Descriptive rather than an instruction. EXIT/BEARISH means 'consider closing an existing long' — NEVER a short-sell call."
+          },
+          "timing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing",
+            "description": "THE TIMING — whether to put money in RIGHT NOW: BUY | WAIT | AVOID | WATCH. A separate question from the verdict: a stock the model likes (verdict BUY) can still be a bad entry today (timing AVOID). This is the value the `verdict` field carried before the two facets were given separate names. Null when this row has no entry answer at all (no value and no suppression gate) — the whole facet is then null and no filter matches it."
+          },
+          "timing_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Label",
+            "description": "The timing facet in plain English, e.g. 'No setup yet' — a reading of a setup that WAS evaluated. Null when a suppression gate withheld the entry facet before it could be evaluated; `timing_statement` carries the answer in that case, while `timing` keeps its stand-aside wire value for filtering. Also null — alongside every other entry field — when there is no entry answer at all."
+          },
+          "timing_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Statement",
+            "description": "Set ONLY when a suppression gate withheld the entry facet rather than the swing engine evaluating it and standing aside: the non-directional statement a reader may see ('No entry signal today'). Never a substitute direction — null whenever a real entry value exists."
+          },
+          "timing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Reason",
+            "description": "The suppression gate's own words for why no entry was published, quoted from the scan's gate trace. Null when nothing was withheld."
+          },
+          "timing_gate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Gate",
+            "description": "Id of the gate that withheld the entry facet, e.g. `regime`."
+          },
+          "actionable": {
+            "type": "boolean",
+            "title": "Actionable",
+            "description": "True when there is a capital action to take: an entry to put on (a published BUY with a full trade plan), or an existing long to close (an EXIT verdict). False for every stand-aside.",
+            "default": false
+          },
+          "entry_actionable": {
+            "type": "boolean",
+            "title": "Entry Actionable",
+            "description": "True only for a published BUY carrying a full trade plan (entry, stop, take-profit ladder) — i.e. `actionable` restricted to new entries, excluding EXIT.",
+            "default": false
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Plain-English reason for this verdict — why we do (or do not) publish a trade. NULLABLE: null when there is no entry answer at all (no entry value and no suppression gate). A sentence there would explain a decision that was never made."
+          },
+          "gates_failed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Gates Failed",
+            "description": "Ids of the suppression gates that fired for this ticker (e.g. `regime` — market conditions, `confluence`, `drawdown`, `correlation`) — empty for a published BUY."
+          },
+          "conviction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conviction"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Price"
+          },
+          "stop_loss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss"
+          },
+          "take_profit": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Profit"
+          },
+          "position_size_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Size Pct"
+          },
+          "risk_at_stop_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk At Stop Pct"
+          },
+          "rr_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rr Ratio"
+          },
+          "invalidation_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation Note"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SwingSignalResponse",
+        "description": "Swing trade signal derived from the 3-month quantum horizon.\n\nAlways populated — `null` is never an answer. When no trade is published\n(suppressed by the market-conditions gate, the confluence gates, or the\nrisk/Kelly sizing gate) the verdict is an explicit non-actionable\nWAIT/AVOID carrying the reason and the gates that fired.\n\nThe ONE exception is a missing answer rather than a negative one: when this\nrow carries no entry value AND no suppression gate fired, the whole ENTRY\nfacet is null — `timing`, `timing_label`, `timing_statement`,\n`timing_reason`, `timing_gate`, `reason` and `invalidation_note` are all\n`null`, and `entry_actionable` is false. Nothing was evaluated, so there is\nnothing to state; a `WAIT` here would assert a stand-aside we never\ncomputed. Such a row deliberately does NOT match `?timing=wait`. The\nDIRECTION facet (`verdict` / `verdict_label`) still publishes normally."
+      },
+      "TickerIndicatorsResponse": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "aggregate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate"
+          },
+          "groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groups"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TickerIndicatorsResponse",
+        "description": "The same sheet shape, for one stock rather than the whole market.\n\nDeliberately the same envelope: one registry per subject, one row type, one\nrenderer. A separate schema here would be the first step back towards two\nsurfaces describing the same number in two different ways."
+      },
+      "TickerSignalResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "band_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Coverage Pct",
+            "description": "ALWAYS NULL. This API publishes no coverage percentage for an individual ticker. One exception applies by measurement CLASS, not by naming an endpoint: any row anywhere we publish that names a ticker plus a forecast start date as a worst individual window (e.g. GET /api/calibration, GET /api/calibration/tsfm) is a cell of that universe measurement, not a reading for this ticker. The key is retained so a consumer sees an explicit null rather than a vanished field. It used to carry the 3mo horizon's scan-time backtest coverage; that figure was withdrawn because it is a single hold-out window (effective sample size one) and because its HIGH end is a defect (band too wide to be informative) that reads as a good grade. Rank on band_reliability; read horizons.*.band_width_read for the direction of miss. Never entitlement-gated."
+          },
+          "calibration_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Score",
+            "description": "ALWAYS NULL. Deprecated alias of band_coverage_pct, retained at the same permanent null so existing consumers see an explicit empty value rather than a missing key. The name wrongly implied a higher-is-better accuracy score; it was never one. See band_coverage_pct for why no per-ticker coverage percentage is published, and rank on band_reliability."
+          },
+          "band_reliability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Reliability",
+            "description": "Reliability of the 3mo band in [0.1, 0.9] — higher is better, and the field to rank tickers on. It survives the withdrawal of the coverage percentage because it is two-sided: it peaks when a nominal 90% band actually covers ~90% and decays above as well as below, so an over-wide band cannot score high and the score cannot be misread as a hit rate. Derived from the same single-window backtest, so treat it as a coarse ordering, not a measurement. Null when this ticker's cohort has no backtest. Never entitlement-gated."
+          },
+          "regime_conditioned": {
+            "type": "boolean",
+            "title": "Regime Conditioned",
+            "description": "True when a live market snapshot was available at scan time and the signal was gated/adjusted by current market conditions. False when the scanner used the conservative fail-open default (Neutral). The field name is kept unchanged for existing integrations.",
+            "default": false
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SwingSignalResponse",
+            "description": "The verdict for this ticker. Always present and populated — a ticker with no publishable trade returns an explicit non-actionable WAIT with its reason, never null."
+          },
+          "quantum": {
+            "$ref": "#/components/schemas/QuantumHorizonResponse"
+          },
+          "reward_to_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasuredRewardToRiskResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Forecast-derived measured reward-to-risk (the ratio the sizing gate binds on), labelled distinctly from the swing planned R:R on `signal.rr_ratio`. Absent when the forecast produced no ladder."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ticker"
+        ],
+        "title": "TickerSignalResponse",
+        "description": "Signal + quantum snapshot for one ticker."
+      },
+      "TooLateResponse": {
+        "properties": {
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction"
+          },
+          "invalidation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalidation"
+          },
+          "chase_cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chase Cost"
+          },
+          "levels": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Levels"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why"
+          },
+          "disclaimer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TooLateResponse",
+        "description": "The answer to \"am I too late to buy this?\" — a sentence with a price in it.\n\nEvery field arrives pre-worded from the model row: the headline verdict, the\ninstruction the customer is meant to act on, the level at which our own call is\nwrong, and (when the stock has run past our buy limit) what chasing it actually\ncosts. `levels` are the prices, each already coloured for the customer and\ncarrying its own tooltip; `why` is the risk-gate trace, which belongs *below*\nthe answer — it is the receipt, not the reading task."
+      },
+      "TradingViewAlert": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Ticker"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker"
+        ],
+        "title": "TradingViewAlert"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WebhookQueuedResponse": {
+        "properties": {
+          "queued": {
+            "type": "boolean",
+            "title": "Queued"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "queued",
+          "ticker"
+        ],
+        "title": "WebhookQueuedResponse",
+        "description": "Result of a TradingView webhook POST."
+      }
+    }
+  }
+}
